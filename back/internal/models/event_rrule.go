@@ -7,10 +7,11 @@ import (
 )
 
 type EventRrule struct {
-	EventId uuid.UUID   `gorm:"type:uuid;primaryKey"`
-	Rrule   string      `gorm:"type:text"`
-	Rdate   []time.Time `gorm:"type:timestamp[]"`
-	Exdate  []time.Time `gorm:"type:timestamp[]"`
-	Until   time.Time   `gorm:"type:timestamp"`
-	Count   int         `gorm:"type:int"`
+	EventID uuid.UUID `gorm:"type:uuid;primaryKey;"`
+	Event   Event     `gorm:"foreignKey:EventID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Rrule   string    `gorm:"type:text;not null"`
+	RDate   time.Time `gorm:"type:timestamptz[]"`
+	ExDate  time.Time `gorm:"type:timestamptz[]"`
+	Until   time.Time
+	Count   int
 }
