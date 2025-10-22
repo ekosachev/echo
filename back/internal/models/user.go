@@ -1,12 +1,15 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID        uint   `gorm:"primaryKey"`
-	Email     string `gorm:"uniqueIndex;size:255;not null"`
-	Name      string `gorm:"size:255;not null"`
-	Password  string `gorm:"size:255;not null"` // bcrypt hash
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	Email        string    `gorm:"type:text;index:idx_users_email,unique;not null"`
+	PasswordHash string    `gorm:"type:text;not null"` // bcrypt hash
+	Timezone     string    `gorm:"type:text;default:MSK"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
 }
