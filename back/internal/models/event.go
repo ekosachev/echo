@@ -8,7 +8,7 @@ import (
 
 type Event struct {
 	Id          uuid.UUID              `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CalendarId  uuid.UUID              `gorm:"type:uuid;not null;on delete cascade;index:idx_events_calendar"`
+	CalendarId  uuid.UUID              `gorm:"type:uuid;not null;on delete cascade index:idx_events_calendar"`
 	Title       string                 `gorm:"type:text;not null"`
 	Description string                 `gorm:"type:text"`
 	Location    string                 `gorm:"type:text"`

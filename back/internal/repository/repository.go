@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -25,7 +26,10 @@ func NewGormRepository[T any](db *gorm.DB) *GormRepository[T] {
 }
 
 func (r *GormRepository[T]) Create(ctx context.Context, entity *T) error {
-	return r.db.WithContext(ctx).Create(entity).Error
+	if err := r.db.WithContext(ctx).Create(entity).Error; err != nil {
+		return fmt.Errorf("failed to create event: %w", err)
+	}
+	return nil
 }
 
 func (r *GormRepository[T]) FindByID(ctx context.Context, id any) (*T, error) {
