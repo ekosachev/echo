@@ -1,5 +1,5 @@
 // router godoc
-package router
+package service
 
 import (
 	"log/slog"

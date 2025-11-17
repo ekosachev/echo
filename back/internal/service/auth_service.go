@@ -25,15 +25,14 @@ func NewAuthService(repo repository.Repository[models.User], jwtSecret string) *
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, name, email, plainPassword string) (*models.User, error) {
+func (s *AuthService) Register(ctx context.Context, email, plainPassword string) (*models.User, error) {
 	hash, err := password.Hash(plainPassword)
 	if err != nil {
 		return nil, err
 	}
 	user := &models.User{
-		Name:     name,
-		Email:    email,
-		Password: hash,
+		Email:        email,
+		PasswordHash: hash,
 	}
 	if err := s.usersRepo.Create(ctx, user); err != nil {
 		return nil, err
@@ -46,7 +45,7 @@ func (s *AuthService) Login(ctx context.Context, email, plainPassword string) (s
 	if err != nil {
 		return "", nil, ErrInvalidCredentials
 	}
-	if err := password.Compare(user.Password, plainPassword); err != nil {
+	if err := password.Compare(user.PasswordHash, plainPassword); err != nil {
 		return "", nil, ErrInvalidCredentials
 	}
 	token, err := s.generateJWT(user)
@@ -62,7 +61,6 @@ func (s *AuthService) generateJWT(user *models.User) (string, error) {
 		"sub":   user.ID,
 		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 		"email": user.Email,
-		"name":  user.Name,
 		"iat":   time.Now().Unix(),
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

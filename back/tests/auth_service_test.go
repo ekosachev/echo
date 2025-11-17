@@ -25,7 +25,7 @@ func TestAuthService_RegisterAndLogin(t *testing.T) {
 	svc := service.NewAuthService(repo, "testsecret")
 
 	ctx := context.Background()
-	_, err = svc.Register(ctx, "Alice", "alice@example.com", "strongpassword")
+	_, err = svc.Register(ctx, "alice@example.com", "strongpassword")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
