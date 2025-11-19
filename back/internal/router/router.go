@@ -62,6 +62,7 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 	authHandler := handlers.NewAuthHandler(authSvc)
 	eventHandler := handlers.NewEventHandler(eventSvc)
 	calendarHandler := handlers.NewCalendarHandler(calendarSvc, eventSvc)
+	telegramHandler := handlers.NewTelegramHandler(db)
 
 	api := r.Group("/api/v1")
 	{
@@ -78,6 +79,9 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 			protected.GET("/auth/me", authHandler.Me)
 
 			protected.PUT("/user/timezone", authHandler.UpdateTimezone)
+
+			// Telegram link
+			protected.POST("/telegram/link", telegramHandler.LinkTelegram)
 
 			// Calendar routes
 			protected.POST("/calendars", calendarHandler.CreateCalendar)
