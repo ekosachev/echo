@@ -90,7 +90,7 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 			protected.PUT("/calendars/:id", calendarHandler.UpdateCalendar)
 			protected.DELETE("/calendars/:id", calendarHandler.DeleteCalendar)
 
-			// Event routes (with timezone support)
+			// Event routes
 			protected.POST("/events", eventHandler.CreateEvent)
 			protected.GET("/events/:id", eventHandler.GetEvent)
 			protected.PUT("/events/:id", eventHandler.UpdateEvent)
