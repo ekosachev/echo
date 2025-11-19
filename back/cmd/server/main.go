@@ -12,7 +12,6 @@ import (
 	"github.com/ekosachev/go-backend-template/internal/config"
 	"github.com/ekosachev/go-backend-template/internal/db"
 	"github.com/ekosachev/go-backend-template/internal/logger"
-	"github.com/ekosachev/go-backend-template/internal/models"
 	"github.com/ekosachev/go-backend-template/internal/router"
 )
 
@@ -31,12 +30,6 @@ func main() {
 	gdb, err := db.Connect(cfg, l)
 	if err != nil {
 		l.Error("failed to connect to database", slog.Any("error", err))
-		os.Exit(1)
-	}
-
-	// Auto-migrate models (idempotent)
-	if err := gdb.AutoMigrate(&models.User{}); err != nil {
-		l.Error("failed to migrate models", slog.Any("error", err))
 		os.Exit(1)
 	}
 
