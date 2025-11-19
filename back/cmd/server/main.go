@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// Setup router and HTTP server
-	r := router.New(cfg, l, gdb)
+	r := router.NewRouter(cfg, l, gdb)
 
 	// Graceful shutdown handling
 	go func() {

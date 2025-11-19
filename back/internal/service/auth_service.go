@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ekosachev/go-backend-template/internal/models"
 	"github.com/ekosachev/go-backend-template/internal/repository"
 	"github.com/ekosachev/go-backend-template/pkg/password"
+	"github.com/ekosachev/go-backend-template/pkg/timezone"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
@@ -65,4 +68,22 @@ func (s *AuthService) generateJWT(user *models.User) (string, error) {
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return t.SignedString([]byte(s.jwtSecret))
+}
+
+func (s *AuthService) UpdateTimezone(ctx context.Context, userID uuid.UUID, timezoneStr string) error {
+	if !timezone.IsValidTimezone(timezoneStr) {
+		return fmt.Errorf("invalid timezone: %s", timezoneStr)
+	}
+
+	user, err := s.usersRepo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	user.Timezone = timezoneStr
+	return s.usersRepo.Update(ctx, user)
+}
+
+func (s *AuthService) GetSupportedTimezones(ctx context.Context) []string {
+	return timezone.SupportedTimezones
 }
