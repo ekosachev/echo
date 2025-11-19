@@ -1,4 +1,3 @@
-// internal/models/bot_link.go
 package models
 
 import (

@@ -71,5 +71,6 @@ func (h *TelegramHandler) getUserIDFromContext(c *gin.Context) (uuid.UUID, error
 	if !ok {
 		return uuid.Nil, fmt.Errorf("user ID not found")
 	}
+
 	return uuid.Parse(userIDStr)
 }
