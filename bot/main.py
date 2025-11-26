@@ -7,7 +7,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 import aiohttp
 
-
+authenticated_users = {}
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
 storage = MemoryStorage()
@@ -84,6 +84,7 @@ async def process_password(message: types.Message, state: FSMContext):
                     logging.debug(f"Endpoint {endpoint} failed: {e}")
                     continue
             if success:
+                authenticated_users[message.from_user.id] = login
                 await message.answer(
                     "Аккаунт успешно привязан! Теперь вы можете использовать функции бота.",
                     reply_markup=get_main_keyboard()
@@ -217,15 +218,142 @@ async def cmd_help(message: types.Message):
 
 @dp.message(F.text == "My Account")
 async def my_account(message: types.Message):
+    user_login = authenticated_users.get(message.from_user.id, "Не привязан")
+
     await message.answer(
-        f"Ваш Telegram ID: {message.from_user.id}\n"
-        "Для управления аккаунтом используйте сайт.",
+        f"👤 Ваш аккаунт:\n"
+        f"Telegram ID: {message.from_user.id}\n"
+        f"Привязан к: {user_login}\n"
+        f"Статус: {'✅ Активен' if message.from_user.id in authenticated_users else '❌ Не привязан'}",
         reply_markup=get_main_keyboard()
     )
 
+
 @dp.message(F.text == "Today")
 async def today(message: types.Message):
-    await message.reply("Расписание на сегодня:\n")  # Возвращаем кнопку Start
+    if message.from_user.id not in authenticated_users:
+        await message.answer(
+            "❌ Сначала привяжите аккаунт через /start",
+            reply_markup=get_start_keyboard()
+        )
+        return
+    from datetime import datetime, date
+    import aiohttp
+
+    today_date = date.today().isoformat()
+    telegram_id = message.from_user.id
+    await message.answer("Получаю задачи на сегодня...")
+
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)) as session:
+        try:
+            endpoints = [
+                f"{API_BASE_URL}/api/tasks/?due_date={today_date}",
+                f"{API_BASE_URL}/api/tasks/?date={today_date}",
+                f"{API_BASE_URL}/tasks/?due_date={today_date}",
+                f"{API_BASE_URL}/api/schedule/?date={today_date}",
+            ]
+
+            tasks_found = False
+            today_tasks = []
+
+            for endpoint in endpoints:
+                try:
+                    async with session.get(endpoint) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+
+                            # Обрабатываем разные форматы ответа API
+                            if isinstance(data, list) and data:
+                                today_tasks = data
+                                tasks_found = True
+                                break
+                            elif isinstance(data, dict) and 'results' in data and data['results']:
+                                today_tasks = data['results']
+                                tasks_found = True
+                                break
+                            elif isinstance(data, dict) and 'tasks' in data and data['tasks']:
+                                today_tasks = data['tasks']
+                                tasks_found = True
+                                break
+                except Exception as e:
+                    logging.debug(f"Endpoint {endpoint} failed: {e}")
+                    continue
+
+            if tasks_found and today_tasks:
+                tasks_text = format_tasks_for_today(today_tasks, today_date)
+                await message.answer(tasks_text, reply_markup=get_main_keyboard())
+            else:
+                await message.answer(
+                    f"🎉 Отлично! На сегодня ({datetime.now().strftime('%d.%m.%Y')}) задач нет.\n"
+                    "Можете отдохнуть или запланировать новые задачи!",
+                    reply_markup=get_main_keyboard()
+                )
+        except aiohttp.ClientError as e:
+            logging.error(f"Connection error: {e}")
+            await message.answer(
+                "❌ Ошибка подключения к серверу. Попробуйте позже.",
+                reply_markup=get_main_keyboard()
+            )
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            await message.answer(
+                "❌ Произошла ошибка при получении задач.",
+                reply_markup=get_main_keyboard()
+            )
+
+def format_tasks_for_today(tasks, today_date):
+    from datetime import datetime
+
+    date_obj = datetime.strptime(today_date, "%Y-%m-%d")
+    formatted_date = date_obj.strftime("%d.%m.%Y")
+    weekday = get_russian_weekday(today_date)
+
+    if not tasks:
+        return f"На {weekday} ({formatted_date}) задач нет."
+    task_list = [f"{weekday}, {formatted_date}\n"]
+
+    for i, task in enumerate(tasks, 1):
+        if isinstance(task, dict):
+            title = task.get('title', 'Без названия')
+            description = task.get('description', '')
+            completed = task.get('completed', False)
+            due_time = task.get('due_time', '') or task.get('time', '')
+            priority = task.get('priority', 'medium')
+            status_emoji = "✅" if completed else "⏳"
+
+            priority_emoji = "🔴"
+            if priority == 'low':
+                priority_emoji = "🟢"
+            elif priority == 'medium':
+                priority_emoji = "🟡"
+            elif priority == 'high':
+                priority_emoji = "🔴"
+
+            task_line = f"{i}. {status_emoji} {priority_emoji} {title}"
+            if due_time:
+                task_line += f" 🕒 {due_time}"
+            if description:
+                short_desc = description[:100] + "..." if len(description) > 100 else description
+                task_line += f"\n   📝 {short_desc}"
+            task_list.append(task_line)
+        else:
+            task_list.append(f"{i}. 📋 {task}")
+    completed_count = sum(1 for task in tasks if isinstance(task, dict) and task.get('completed'))
+    total_count = len(tasks)
+    task_list.append(f"\n📊 Итого: {completed_count}/{total_count} выполнено")
+
+    if completed_count == total_count and total_count > 0:
+        task_list.append("🎉 Все задачи выполнены! Отличная работа!")
+    return "\n".join(task_list)
+
+def get_russian_weekday(date_string=None):
+    from datetime import datetime
+    if date_string:
+        date_obj = datetime.strptime(date_string, "%Y-%m-%d")
+    else:
+        date_obj = datetime.now()
+    days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
+    return days[date_obj.weekday()]
 
 @dp.message(F.text == "Week")
 async def week(message: types.Message):
