@@ -355,9 +355,153 @@ def get_russian_weekday(date_string=None):
     days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
     return days[date_obj.weekday()]
 
+
 @dp.message(F.text == "Week")
 async def week(message: types.Message):
-    await message.reply("Расписание на неделю:\n")  # Возвращаем кнопку Start
+    if message.from_user.id not in authenticated_users:
+        await message.answer(
+            "❌ Сначала привяжите аккаунт через /start",
+            reply_markup=get_start_keyboard()
+        )
+        return
+    from datetime import datetime, date, timedelta
+    import aiohttp
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    await message.answer("📅 Получаю задачи на неделю...")
+
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)) as session:
+        try:
+            endpoints = [
+                f"{API_BASE_URL}/api/tasks/?due_date_after={start_of_week}&due_date_before={end_of_week}",
+                f"{API_BASE_URL}/api/tasks/?date_from={start_of_week}&date_to={end_of_week}",
+                f"{API_BASE_URL}/tasks/?start_date={start_of_week}&end_date={end_of_week}",
+                f"{API_BASE_URL}/api/tasks/",
+                f"{API_BASE_URL}/tasks/",
+            ]
+            tasks_found = False
+            all_tasks = []
+            week_tasks = []
+
+            for endpoint in endpoints:
+                try:
+                    async with session.get(endpoint) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            if isinstance(data, list):
+                                all_tasks = data
+                                tasks_found = True
+                                break
+                            elif isinstance(data, dict) and 'results' in data:
+                                all_tasks = data['results']
+                                tasks_found = True
+                                break
+                            elif isinstance(data, dict) and 'tasks' in data:
+                                all_tasks = data['tasks']
+                                tasks_found = True
+                                break
+                except Exception as e:
+                    logging.debug(f"Endpoint {endpoint} failed: {e}")
+                    continue
+            if tasks_found and all_tasks:
+                for task in all_tasks:
+                    if isinstance(task, dict):
+                        task_date = task.get('due_date') or task.get('date')
+                        if task_date:
+                            try:
+                                task_date_obj = datetime.strptime(task_date.split('T')[0], "%Y-%m-%d").date()
+                                if start_of_week <= task_date_obj <= end_of_week:
+                                    week_tasks.append(task)
+                            except:
+                                continue
+                if week_tasks:
+                    tasks_text = format_tasks_for_week(week_tasks, start_of_week, end_of_week)
+                    await message.answer(tasks_text, reply_markup=get_main_keyboard())
+                else:
+                    await message.answer(
+                        f"🎉 На неделю с {start_of_week.strftime('%d.%m')} по {end_of_week.strftime('%d.%m.%Y')} задач нет!\n"
+                        "Можете отдохнуть или запланировать новые задачи!",
+                        reply_markup=get_main_keyboard()
+                    )
+            else:
+                await message.answer(
+                    f"📅 Неделя: {start_of_week.strftime('%d.%m')} - {end_of_week.strftime('%d.%m.%Y')}\n\n"
+                    "Не удалось получить задачи. Возможно, API не настроено.",
+                    reply_markup=get_main_keyboard()
+                )
+        except aiohttp.ClientError as e:
+            logging.error(f"Connection error: {e}")
+            await message.answer(
+                "❌ Ошибка подключения к серверу. Попробуйте позже.",
+                reply_markup=get_main_keyboard()
+            )
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            await message.answer(
+                "❌ Произошла ошибка при получении задач на неделю.",
+                reply_markup=get_main_keyboard()
+            )
+
+def format_tasks_for_week(tasks, start_date, end_date):
+    from datetime import datetime
+    if not tasks:
+        return f"На неделю с {start_date.strftime('%d.%m')} по {end_date.strftime('%d.%m.%Y')} задач нет."
+    sorted_tasks = sorted(tasks, key=lambda x: (
+        x.get('due_date', ''),
+        not x.get('completed', False)  # Невыполненные задачи сначала
+    ))
+    task_list = [
+        f"📅 Задачи на неделю:",
+        f"{start_date.strftime('%d.%m')} - {end_date.strftime('%d.%m.%Y')}\n"
+    ]
+    for i, task in enumerate(sorted_tasks, 1):
+        if isinstance(task, dict):
+            title = task.get('title', 'Без названия')
+            description = task.get('description', '')
+            completed = task.get('completed', False)
+            due_date = task.get('due_date', '') or task.get('date', '')
+            due_time = task.get('due_time', '') or task.get('time', '')
+            priority = task.get('priority', 'medium')
+            status_emoji = "✅" if completed else "⏳"
+
+            priority_emoji = "🔴"
+            if priority == 'low':
+                priority_emoji = "🟢"
+            elif priority == 'medium':
+                priority_emoji = "🟡"
+
+            date_display = ""
+            if due_date:
+                try:
+                    date_obj = datetime.strptime(due_date.split('T')[0], "%Y-%m-%d")
+                    date_display = f"📅 {date_obj.strftime('%d.%m')}"
+                except:
+                    date_display = f"📅 {due_date}"
+            task_line = f"{i}. {status_emoji} {priority_emoji} {title}"
+            if date_display:
+                task_line += f" {date_display}"
+            if due_time:
+                task_line += f" 🕒 {due_time}"
+            if description:
+                short_desc = description[:80] + "..." if len(description) > 80 else description
+                task_line += f"\n   📝 {short_desc}"
+            task_list.append(task_line)
+        else:
+            task_list.append(f"{i}. 📋 {task}")
+    completed_count = sum(1 for task in tasks if isinstance(task, dict) and task.get('completed'))
+    total_count = len(tasks)
+    task_list.append(f"\n📊 Итого на неделю: {completed_count}/{total_count} выполнено")
+
+    if completed_count == total_count and total_count > 0:
+        task_list.append("🎉 Все задачи на неделю выполнены! Супер!")
+    elif completed_count == 0 and total_count > 0:
+        task_list.append("💪 Начните выполнять задачи! У вас всё получится!")
+    elif completed_count > 0:
+        progress = int((completed_count / total_count) * 100)
+        task_list.append(f"📈 Прогресс: {progress}% выполнено")
+
+    return "\n".join(task_list)
 
 @dp.message(F.text == "Start")
 async def start_button(message: types.Message,state: FSMContext):
