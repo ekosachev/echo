@@ -1,11 +1,23 @@
 import { Card } from "@/components/ui/Card/Card";
+import { FaRegUser, FaRegCalendar } from "react-icons/fa6";
+import CalendarList from "./CalendarList";
 
 export default function Sidebar() {
   return (
-    <Card variant='default' className="m-4">
-      Primary sidebar
-      Available calendars, account, e. g.
-    </Card>
+    <div className='flex flex-col h-full gap-4 m-2 ' >
+
+      <Card variant='outline' hoverable>
+        <div className="flex flex-row justify-between items-center gap-2">
+          <p className="text-(--text) text-lg">CurrentUserName</p>
+          <FaRegUser></FaRegUser>
+        </div>
+      </Card >
+
+      <Card variant="outline" className="grow" >
+        <h1 className="text-(--text) text-xl mb-2">My calendars</h1>
+        <CalendarList></CalendarList>
+      </Card>
+    </div>
   )
 }
 

@@ -63,8 +63,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
           paddingClasses[padding],
           radiusClasses[radius],
           shadowClasses[shadow],
-          bordered && 'border border-slate-400 dark:border-slate-600',
-          hoverable && !disabled && 'hover:shadow-lg hover:border-sky-300 cursor-pointer',
+          bordered && 'border border-slate-400 dark:border-slate-800',
+          hoverable && !disabled && 'hover:shadow-lg hover:border-sky-300 cursor-pointer hover:transition-all duration-75',
           disabled && 'opacity-50 cursor-not-allowed',
           className // Позволяет переопределить стили снаружи
         )}
