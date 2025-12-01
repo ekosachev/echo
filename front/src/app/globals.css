@@ -14,8 +14,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-slate-950);
+    --foreground: var(--color-sky-50);
+  }
+}
+
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: var(--color-sky-50);
+    --foreground: var(--color-slate-950);
   }
 }
 
