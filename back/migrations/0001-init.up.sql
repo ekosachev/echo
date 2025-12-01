@@ -6,6 +6,8 @@ CREATE TABLE users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     timezone TEXT DEFAULT 'UTC',
+    locale TEXT DEFAULT 'en',
+    notification_prefs JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP DEFAULT now()
 );
 CREATE INDEX idx_users_email ON users(email);
@@ -16,6 +18,8 @@ CREATE TABLE calendars (
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     color TEXT,
+    is_shared BOOLEAN DEFAULT FALSE,
+    visibility TEXT NOT NULL DEFAULT 'private',
     created_at TIMESTAMP DEFAULT now()
 );
 CREATE INDEX idx_calendars_owner ON calendars(owner_id);
