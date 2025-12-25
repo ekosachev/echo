@@ -1,3 +1,4 @@
+import { authFetch } from "@/lib/authFetch";
 import { CalendarCard } from "./CalendarCard";
 
 export default function CalendarList() {

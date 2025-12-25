@@ -38,3 +38,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # front:
+  #   container_name: echo_front
+  #   build:
+  #     context: ./front
+  #     dockerfile: front.dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   env_file:
+  #     - ./front/.env
+  #   volumes:
+  #     - ./front:/app
+  #   restart: unless-stopped
