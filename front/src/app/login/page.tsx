@@ -31,10 +31,6 @@ export default function LoginPage() {
             <FaDoorOpen className="text-4xl text-sky-500"></FaDoorOpen>
           </div>
           
-
-          {/* <input name="email" type="email" placeholder="Email" required /> */}
-          {/* <input name="password" type="password" placeholder="Пароль" required /> */}
-          
           <fieldset className="border-2 my-2 p-2 rounded-md border-slate-800 border-dashed">
             <legend className="italic text-slate-400 px-2" >Введите ваши данные для входа</legend>
             <Field name="email" type="email" placeholder="Email" required></Field>
