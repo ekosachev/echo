@@ -2,7 +2,6 @@
 import React from "react";
 import { Card } from "@/components/ui/Card/Card";
 
-import CalendarList from "./CalendarList";
 import SidebarClient from "./SidebarClient";
 
 import { authFetch } from "@/lib/authFetch";
@@ -24,7 +23,6 @@ export default async function Sidebar() {
 
       <Card variant="outline" className="grow" >
         <SidebarClient />
-        <CalendarList></CalendarList>
       </Card>
     </div>
   )

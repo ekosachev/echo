@@ -1,5 +1,8 @@
-import { authFetch } from "@/lib/authFetch";
+"use client";
+
+import React from "react";
 import { CalendarCard } from "./CalendarCard";
+import { fetchCalendarsAction } from "./actions";
 
 export const colorVariants = {
   red: 'text-red-500',
@@ -21,18 +24,47 @@ export const colorVariants = {
   rose: 'text-rose-500',
 }
 
-export default async function CalendarList() {
-  const res = await authFetch("/api/v1/calendars");
-  const calendars = await res!.json();
-  return (
+export default function CalendarList({ reloadTrigger = 0 }: { reloadTrigger?: number } = {}) {
+  const [calendars, setCalendars] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    const loadCalendars = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchCalendarsAction();
+        setCalendars(data.calendars || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load calendars");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCalendars();
+  }, [reloadTrigger]);
+
+  if (isLoading) {
+    return <div className="text-sm text-gray-500">Загрузка календарей...</div>;
+  }
+
+  if (error) {
+    return <div className="text-sm text-red-500">{error}</div>;
+  }
+
+  console.log("Calendars loaded:", calendars);
+  return (
     <ul style={{ listStyleType: "none" }} className="flex flex-row gap-2 overflow-auto md:flex-col ">
-      {calendars.calendars.map((calendar: any) => (
+      {calendars.map((calendar: any) => (
         <li key={calendar.id} className="block">
-          <CalendarCard  iconColor={colorVariants[calendar.color as keyof typeof colorVariants]} calendarName={calendar.name}></CalendarCard>
+          <CalendarCard
+            iconColor={colorVariants[calendar.color as keyof typeof colorVariants]}
+            calendarName={calendar.name}
+          ></CalendarCard>
         </li>
       ))}
-
     </ul>
-  )
+  );
 }
