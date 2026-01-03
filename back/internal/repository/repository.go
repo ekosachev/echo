@@ -12,6 +12,7 @@ type Repository[T any] interface {
 	Create(ctx context.Context, entity *T) error
 	FindByID(ctx context.Context, id any) (*T, error)
 	FindOne(ctx context.Context, where map[string]any) (*T, error)
+	FindAll(ctx context.Context, where map[string]any) ([]*T, error)
 	Update(ctx context.Context, entity *T) error
 	Delete(ctx context.Context, where map[string]any) error
 }	
@@ -46,6 +47,14 @@ func (r *GormRepository[T]) FindOne(ctx context.Context, where map[string]any) (
 		return nil, fmt.Errorf("failed to read model: %w", err)
 	}
 	return &t, nil
+}
+
+func (r *GormRepository[T]) FindAll(ctx context.Context, where map[string]any) ([]*T, error) {
+	var results []*T
+	if err := r.db.WithContext(ctx).Where(where).Find(&results).Error; err != nil {
+		return nil, fmt.Errorf("failed to read models: %w", err)
+	}
+	return results, nil
 }
 
 func (r *GormRepository[T]) Update(ctx context.Context, entity *T) error {
