@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/Card/Card";
 import { Button } from "@/components/forms/Button/Button";
 import { FaPlus } from "react-icons/fa6";
 import { Field } from "@/components/forms/Field/Field";
+import { createCalendarAction } from "./actions";
+import CalendarList from "./CalendarList";
 // import { colorVariants } from "./CalendarList";
 export const colorVariants = {
   red: 'bg-red-500',
@@ -27,6 +29,9 @@ export const colorVariants = {
 
 export default function SidebarClient() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [reloadTrigger, setReloadTrigger] = React.useState(0);
   const _colorKeys = Object.keys(colorVariants) as Array<keyof typeof colorVariants>;
   const [selectedColor, setSelectedColor] = React.useState<string>(_colorKeys[0] ?? 'blue');
 
@@ -43,6 +48,8 @@ export default function SidebarClient() {
           <FaPlus></FaPlus>
         </Button>
       </div>
+
+      <CalendarList reloadTrigger={reloadTrigger} />
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -63,11 +70,36 @@ export default function SidebarClient() {
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); setIsOpen(false); }}>
-              {/* <input
-                className="w-full mb-4 rounded-md border px-3 py-2"
-                placeholder="Новый календарь"
-              /> */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setError(null);
+                setIsLoading(true);
+
+                const formData = new FormData(e.currentTarget);
+                const name = formData.get("name") as string;
+                const color = formData.get("color") as string;
+
+                try {
+                  await createCalendarAction(name, color);
+                  setIsOpen(false);
+                  setReloadTrigger((prev) => prev + 1);
+                  (e.target as HTMLFormElement).reset();
+                  setSelectedColor(_colorKeys[0] ?? 'blue');
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "An error occurred"
+                  );
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+            >
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
 
               <Field type='text' name='name' placeholder="Название" required></Field>
               <p>Выберите цвет:</p>
@@ -93,8 +125,10 @@ export default function SidebarClient() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Отмена</Button>
-                <Button type="submit">Создать</Button>
+                <Button type="button" variant="secondary" onClick={() => setIsOpen(false)} disabled={isLoading}>Отмена</Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Создание..." : "Создать"}
+                </Button>
               </div>
             </form>
           </Card>
