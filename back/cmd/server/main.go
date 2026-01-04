@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata"
 
 	_ "github.com/ekosachev/go-backend-template/docs"
 	"github.com/ekosachev/go-backend-template/internal/config"

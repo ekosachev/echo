@@ -95,6 +95,7 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 			protected.POST("/calendars", calendarHandler.CreateCalendar)
 			protected.GET("/calendars", calendarHandler.GetUserCalendars)
 			protected.GET("/calendars/:id", calendarHandler.GetCalendar)
+			protected.GET("/calendars/:id/events", calendarHandler.GetCalendarEvents)
 			protected.PUT("/calendars/:id", calendarHandler.UpdateCalendar)
 			protected.DELETE("/calendars/:id", calendarHandler.DeleteCalendar)
 

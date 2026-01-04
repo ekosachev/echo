@@ -7,10 +7,10 @@ RUN apk add --no-cache git ca-certificates
 
 COPY go.mod ./
 RUN go mod download
+RUN go get time/tzdata
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server
-
 # Runtime stage
 FROM alpine:3.19
 WORKDIR /app

@@ -35,7 +35,7 @@ export default function CalendarList({ reloadTrigger = 0 }: { reloadTrigger?: nu
       setError(null);
       try {
         const data = await fetchCalendarsAction();
-        setCalendars(data.calendars || []);
+        setCalendars(data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load calendars");
       } finally {

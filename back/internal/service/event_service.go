@@ -60,7 +60,7 @@ func (s *EventService) CreateEvent(ctx context.Context, userID uuid.UUID, req *C
 		return nil, fmt.Errorf("failed to convert to UTC start time: %w", err)
 	}
 
-	endUTC, err := timezone.ConvertFromUTC(req.EndAt, req.Timezone)
+	endUTC, err := timezone.ConvertToUTC(req.EndAt, req.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to UTC end time: %w", err)
 	}
@@ -76,7 +76,7 @@ func (s *EventService) CreateEvent(ctx context.Context, userID uuid.UUID, req *C
 		AllDay:      req.AllDay,
 		Priority:    req.Priority,
 		Color:       req.Color,
-		Meta:        make(map[string]interface{}),
+		// Meta:        make(map[string]interface{}),
 	}
 
 	if err := s.eventRepo.Create(ctx, event); err != nil {
@@ -157,7 +157,7 @@ func (s *EventService) UpdateEventWithTimezone(ctx context.Context, userID uuid.
 	event.AllDay = req.AllDay
 	event.Priority = req.Priority
 	event.Color = req.Color
-	event.Meta = make(map[string]interface{})
+	// event.Meta = make(map[string]interface{})
 
 	if err := s.eventRepo.Update(ctx, event); err != nil {
 		return nil, err
@@ -173,7 +173,11 @@ func (s *EventService) GetEventsByCalendar(ctx context.Context, calendarID uuid.
 	}
 
 	userTimezone := timezone.GetUserTimezone(user.Timezone)
-	events := []*models.Event{}
+	where := map[string]any{"calendar_id": calendarID}
+	events, err := s.eventRepo.FindAll(ctx, where)
+	if err != nil {
+		return []*models.Event{}, nil
+	}
 
 	for _, event := range events {
 		event.StartAt, _ = timezone.ConvertFromUTC(event.StartAt, userTimezone)

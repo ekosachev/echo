@@ -168,7 +168,7 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 
 	calendar, err := h.calendarService.GetCalendarForUser(c.Request.Context(), calendarID, userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "calendar not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Errorf("calendar not found: %w", err)})
 		return
 	}
 
