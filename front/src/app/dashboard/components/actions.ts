@@ -44,8 +44,6 @@ export async function deleteCalendarAction(calendarId: string) {
     console.error("Error deleting calendar:", error);
     throw new Error(error.message || "Failed to delete calendar");
   }
-
-  return await res.json();
 }
 
 export async function updateCalendarAction(calendarId: string, name: string, color: string) {
