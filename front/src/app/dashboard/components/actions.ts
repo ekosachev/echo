@@ -34,6 +34,35 @@ export async function createCalendarAction(name: string, color: string) {
   return await res.json();
 }
 
+export async function deleteCalendarAction(calendarId: string) {
+  const res = await authFetch(`/api/v1/calendars/${calendarId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    console.error("Error deleting calendar:", error);
+    throw new Error(error.message || "Failed to delete calendar");
+  }
+
+  return await res.json();
+}
+
+export async function updateCalendarAction(calendarId: string, name: string, color: string) {
+  const res = await authFetch(`/api/v1/calendars/${calendarId}`, {
+    method: "PUT",
+    body: JSON.stringify({ name, color }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    console.error("Error updating calendar:", error);
+    throw new Error(error.message || "Failed to update calendar");
+  }
+
+  return await res.json();
+}
+
 export async function fetchCalendarsAction(): Promise<Calendar[]> {
   const res = await authFetch("/api/v1/calendars");
   

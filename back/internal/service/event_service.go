@@ -142,7 +142,7 @@ func (s *EventService) UpdateEventWithTimezone(ctx context.Context, userID uuid.
 		return nil, fmt.Errorf("failed to convert to UTC start time: %w", err)
 	}
 
-	endUTC, err := timezone.ConvertFromUTC(req.EndAt, req.Timezone)
+	endUTC, err := timezone.ConvertToUTC(req.EndAt, req.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to UTC end time: %w", err)
 	}
