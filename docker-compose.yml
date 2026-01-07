@@ -61,6 +61,22 @@ services:
     networks:
       - echo
 
+  bot:
+    build: ./bot
+    container_name: bot
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    env_file:
+      - ./bot/.env
+    volumes:
+      - ./bot:/app
+    restart: unless-stopped
+    networks:
+      - echo
+
 networks:
   echo:
     driver: bridge
