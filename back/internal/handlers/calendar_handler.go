@@ -7,6 +7,7 @@ import (
 	"github.com/ekosachev/go-backend-template/internal/models"
 	"github.com/ekosachev/go-backend-template/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -167,7 +168,7 @@ func (h *CalendarHandler) GetCalendar(c *gin.Context) {
 
 	calendar, err := h.calendarService.GetCalendarForUser(c.Request.Context(), calendarID, userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "calendar not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Errorf("calendar not found: %w", err)})
 		return
 	}
 
@@ -318,14 +319,19 @@ func (h *CalendarHandler) getUserIDFromContext(c *gin.Context) (uuid.UUID, error
 		return uuid.Nil, fmt.Errorf("claims not found")
 	}
 
-	claims, ok := claimsAny.(map[string]any)
+	claims, ok := claimsAny.(jwt.MapClaims)
 	if !ok {
 		return uuid.Nil, fmt.Errorf("invalid claims format")
 	}
 
-	userIDStr, ok := claims["sub"].(string)
+	sub, ok := claims["sub"]
 	if !ok {
-		return uuid.Nil, fmt.Errorf("user ID not found in claims")
+		return uuid.Nil, fmt.Errorf("sub claim not found")
+	}
+
+	userIDStr, ok := sub.(string)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("sub is not a string")
 	}
 
 	return uuid.Parse(userIDStr)

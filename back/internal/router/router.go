@@ -11,6 +11,7 @@ import (
 	"github.com/ekosachev/go-backend-template/internal/repository"
 	"github.com/ekosachev/go-backend-template/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
@@ -41,8 +42,15 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 		)
 	})
 
-	r.Use(gin.Recovery())
+	// I hate CORS but what can you do
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
+	r.Use(gin.Recovery())
 	// Health endpoint
 	health := handlers.NewHealthHandler(db)
 	r.GET("/health", health.Health)
@@ -87,6 +95,7 @@ func NewRouter(cfg *config.Config, l *slog.Logger, db *gorm.DB) *gin.Engine {
 			protected.POST("/calendars", calendarHandler.CreateCalendar)
 			protected.GET("/calendars", calendarHandler.GetUserCalendars)
 			protected.GET("/calendars/:id", calendarHandler.GetCalendar)
+			protected.GET("/calendars/:id/events", calendarHandler.GetCalendarEvents)
 			protected.PUT("/calendars/:id", calendarHandler.UpdateCalendar)
 			protected.DELETE("/calendars/:id", calendarHandler.DeleteCalendar)
 

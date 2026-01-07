@@ -14,6 +14,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - echo
 
   app:
     build: ./back/
@@ -38,3 +40,27 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - echo
+
+  front:
+    container_name: front
+    build:
+      context: ./front
+      dockerfile: front.dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./front/.env
+    environment:
+      - API_INTERNAL_URL=http://app:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    volumes:
+      - ./front:/app
+    restart: unless-stopped
+    networks:
+      - echo
+
+networks:
+  echo:
+    driver: bridge

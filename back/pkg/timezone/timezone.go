@@ -14,16 +14,16 @@ var (
 		"America/Los_Angeles",
 		"Asia/Tokyo",
 		"Asia/Shanghai",
+		"Asia/Novosibirsk",
 	}
 )
 
 func IsValidTimezone(tz string) bool {
-	for _, supported := range SupportedTimezones {
-		if supported == tz {
-			return true
-		}
+	_, err := time.LoadLocation(tz)
+	if err != nil {
+		return false
 	}
-	return false
+	return true
 }
 
 func ConvertToUTC(localTime time.Time, timezone string) (time.Time, error) {
