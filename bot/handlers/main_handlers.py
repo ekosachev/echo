@@ -1,8 +1,7 @@
 from aiogram import Router, types, F
 from aiogram.filters.command import Command
-
 from keyboards.main_kb import get_start_keyboard, get_main_keyboard
-from main import authenticated_users
+from global_state import authenticated_users
 
 router = Router()
 @router.message(Command('help'))
@@ -34,7 +33,6 @@ async def my_account(message: types.Message):
 async def start_button(message: types.Message, state):
     from handlers.auth_handlers import cmd_start
     await cmd_start(message, state)
-
 
 @router.message()
 async def any_message(message: types.Message):
