@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const API_URL = "http://localhost:8080";
+const API_URL = "http://app:8080";
 
 export async function loginAction(formData: FormData) {
   const email = formData.get("email");

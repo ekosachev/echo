@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-const API_URL = "http://localhost:8080";
+const API_URL = "http://app:8080";
 
 export async function registerAction(formData: FormData) {
   const name = formData.get("name");

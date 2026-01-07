@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const API_URL = "http://localhost:8080";
 
 export async function authFetch(
   path: string,
@@ -13,7 +12,14 @@ export async function authFetch(
     redirect("/login");
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const apiBase =
+  typeof window === "undefined"
+    ? process.env.API_INTERNAL_URL
+    : process.env.NEXT_PUBLIC_API_URL;
+
+  console.log("Making request to:", `${apiBase}${path} from ${typeof window === "undefined" ? "server" : "client"}`);
+
+  const res = await fetch(`${apiBase}${path}`, {
     ...init,
     headers: {
       ...(init.headers || {}),
