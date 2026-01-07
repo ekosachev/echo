@@ -6,6 +6,7 @@ import (
 
 	"github.com/ekosachev/go-backend-template/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -107,7 +108,9 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	claims, ok := claimsAny.(map[string]any)
+	// На этот фикс было потрачено 5.1e6 нервных клеток и ящик пива
+	// claims, ok := claimsAny.(map[string]any)
+	claims, ok := claimsAny.(jwt.MapClaims)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
 		return

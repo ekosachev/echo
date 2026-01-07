@@ -8,11 +8,8 @@ from handlers.auth_handlers import router as auth_router
 from handlers.main_handlers import router as main_router
 from handlers.schedule_handlers import router as schedule_router
 
-authenticated_users = {}
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
 
 dp.include_router(auth_router)
 dp.include_router(main_router)

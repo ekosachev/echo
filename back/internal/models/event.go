@@ -18,7 +18,7 @@ type Event struct {
 	AllDay      bool                   `gorm:"type:boolean;default:false"`
 	Priority    int                    `gorm:"type:int;default:0"`
 	Color       string                 `gorm:"type:text"`
-	Meta        map[string]interface{} `gorm:"type:jsonb;default:'{}'"`
+	// Meta        map[string]interface{} `gorm:"type:jsonb;default:'{}'"`
 	CreatedAt   time.Time              `gorm:"type:timestamp;default:now()"`
 	UpdatedAt   time.Time              `gorm:"type:timestamp;default:now()"`
 }

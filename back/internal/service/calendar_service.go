@@ -29,11 +29,11 @@ func (s *CalendarService) CreateCalendar(ctx context.Context, calendar *models.C
 
 func (s *CalendarService) GetUserCalendars(ctx context.Context, userID uuid.UUID) ([]*models.Calendar, error) {
 	where := map[string]any{"owner_id": userID}
-	calendar, err := s.repo.FindOne(ctx, where)
+	calendars, err := s.repo.FindAll(ctx, where)
 	if err != nil {
 		return []*models.Calendar{}, nil
 	}
-	return []*models.Calendar{calendar}, nil
+	return calendars, nil
 }
 
 func (s *CalendarService) GetCalendarForUser(ctx context.Context, calendarID, userID uuid.UUID) (*models.Calendar, error) {
