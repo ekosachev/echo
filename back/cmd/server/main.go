@@ -13,6 +13,7 @@ import (
 	"github.com/ekosachev/go-backend-template/internal/config"
 	"github.com/ekosachev/go-backend-template/internal/db"
 	"github.com/ekosachev/go-backend-template/internal/logger"
+	"github.com/ekosachev/go-backend-template/internal/models"
 	"github.com/ekosachev/go-backend-template/internal/router"
 )
 
@@ -32,6 +33,23 @@ func main() {
 	if err != nil {
 		l.Error("failed to connect to database", slog.Any("error", err))
 		os.Exit(1)
+	}
+
+	// Apply SQL migration if `users` table does not exist
+	if !gdb.Migrator().HasTable(&models.User{}) {
+		l.Info("users table not found, applying migrations", slog.String("file", "migrations/0001-init.up.sql"))
+		b, err := os.ReadFile("migrations/0001-init.up.sql")
+		if err != nil {
+			l.Error("failed to read migration file", slog.Any("error", err))
+			os.Exit(1)
+		}
+		if res := gdb.Exec(string(b)); res.Error != nil {
+			l.Error("failed to apply migration", slog.Any("error", res.Error))
+			os.Exit(1)
+		}
+		l.Info("migration applied", slog.String("file", "migrations/0001-init.up.sql"))
+	} else {
+		l.Info("migration skipped, users table exists")
 	}
 
 	// Setup router and HTTP server
