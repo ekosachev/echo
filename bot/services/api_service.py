@@ -1,13 +1,19 @@
-import aiohttp
+"""api_service module handles interactions with the backend api"""
 import logging
+from typing import Optional
+
+import aiohttp
 from config_reader import config
+
+class TokenExpiredError(Exception):
+    pass
 
 class APIService:
     def __init__(self):
         self.base_url = config.api_base_url
         self.timeout = config.api_timeout
 
-    async def authenticate_user(self, login: str, password: str) -> bool:
+    async def authenticate_user(self, login: str, password: str) -> tuple[bool, Optional[str]]:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
             endpoint = f'{self.base_url}/api/v1/auth/login'
             try:
@@ -17,33 +23,44 @@ class APIService:
                         headers={'Content-Type': 'application/json'}
                 ) as resp:
                     if resp.status == 200:
-                        return True
-            except Exception as e:
+                        body = await resp.json()
+                        return True, body["token"]
+                    if resp.status == 401:
+                        return False, None
+            except aiohttp.ClientError as e:
                 logging.error(f"Auth endpoint {endpoint} failed: {e}")
 
-            return False
+            return False, None
+        
+    async def get_calendars(self, token: str) -> Optional[list]:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+            endpoint = f'{self.base_url}/api/v1/calendars'
+            try:
+                async with session.get(endpoint, headers={'Authorization': f'Bearer {token}'}) as resp:
+                    if resp.ok:
+                        data = await resp.json()
+                        return data['calendars']
+                    if resp.status == 401:
+                        raise TokenExpiredError
+            except aiohttp.ClientError as e:
+                logging.error(f"Failed to fetch calendars: {e}")
+        return None
 
-    async def get_today_tasks(self) -> list:
+    async def get_today_tasks(self, token: str) -> list:
         from datetime import date
         today_date = date.today().isoformat()
 
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/tasks/?due_date={today_date}",
-                f"{self.base_url}/api/tasks/?date={today_date}",
-                f"{self.base_url}/tasks/?due_date={today_date}",
-                f"{self.base_url}/api/schedule/?date={today_date}",
-            ]
-
-            for endpoint in endpoints:
-                try:
-                    async with session.get(endpoint) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            return self._parse_tasks_response(data)
-                except Exception as e:
-                    logging.debug(f"Tasks endpoint {endpoint} failed: {e}")
-                    continue
+            endpoint = f'{self.base_url}/api/v1/'
+            try:
+                async with session.get(endpoint) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return self._parse_tasks_response(data)
+                    if resp.status == 401:
+                        raise TokenExpiredError
+            except aiohttp.ClientError as e:
+                logging.error(f"Tasks endpoint {endpoint} failed: {e}")
 
             return []
 

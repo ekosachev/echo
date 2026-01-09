@@ -8,7 +8,7 @@ def get_start_keyboard():
 def get_main_keyboard():
     kb = [
         [types.KeyboardButton(text='Today'), types.KeyboardButton(text='Week')],
-        [types.KeyboardButton(text='My Account')]
+        [types.KeyboardButton(text='My Calendars'), types.KeyboardButton(text='My Account')]
     ]
     return types.ReplyKeyboardMarkup(
         keyboard=kb,

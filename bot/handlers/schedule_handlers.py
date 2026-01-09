@@ -2,11 +2,41 @@ from aiogram import Router, types, F
 import logging
 from datetime import datetime, date, timedelta
 from keyboards.main_kb import get_main_keyboard, get_start_keyboard
-from services.api_service import api_service
+from services.api_service import TokenExpiredError, api_service
 from global_state import authenticated_users
 from utils.date_utils import get_russian_weekday
 
 router = Router()
+@router.message(F.text == "My Calendars")
+async def my_calendars(message: types.Message):
+    user_id = message.from_user.id
+    if user_id not in authenticated_users:
+        await message.answer(
+            "❌ Сначала привяжите аккаунт через /start",
+            reply_markup=get_start_keyboard()
+        )
+        return
+    
+    await message.answer("Получаю список доступнх календарей...")
+
+    try:
+
+        calendars = await api_service.get_calendars(authenticated_users[user_id])
+
+        if calendars is None:
+            await message.answer("Ошибка при получении календарей")
+            return
+        
+        await message.answer(
+            "Доступные календари:\n"
+            + ("Ничего не нашлось :(" if not calendars else '\n'.join(
+                ' - ' + calendar["name"] for calendar in calendars
+            ))
+        )
+
+    except TokenExpiredError as _:
+        await message.answer("Сессия истекла. Пожалуйста, войдите в аккаунт через /start")
+
 @router.message(F.text == "Today")
 async def today(message: types.Message):
     if message.from_user.id not in authenticated_users:

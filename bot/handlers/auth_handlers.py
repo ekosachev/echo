@@ -34,9 +34,9 @@ async def process_password(message: types.Message, state: FSMContext):
     password = message.text
 
     try:
-        success = await api_service.authenticate_user(login, password)
+        success, token = await api_service.authenticate_user(login, password)
         if success:
-            authenticated_users[message.from_user.id] = login
+            authenticated_users[message.from_user.id] = token
             await message.answer(
                 "Аккаунт успешно привязан! Теперь вы можете использовать функции бота.",
                 reply_markup=get_main_keyboard()
