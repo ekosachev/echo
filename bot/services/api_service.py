@@ -92,36 +92,24 @@ class APIService:
 
         
 
-    async def get_week_tasks(self) -> list:
-        from datetime import date, timedelta, datetime
-        today = date.today()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
+    async def get_week_tasks(self, token) -> Optional[dict]:
+        from datetime import datetime, date, timedelta
+        from zoneinfo import ZoneInfo
+        
+        events_by_calendar = await self._get_all_events(token)
+        if not events_by_calendar:
+            return events_by_calendar
 
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/tasks/?due_date_after={start_of_week}&due_date_before={end_of_week}",
-                f"{self.base_url}/api/tasks/?date_from={start_of_week}&date_to={end_of_week}",
-                f"{self.base_url}/tasks/?start_date={start_of_week}&end_date={end_of_week}",
-                f"{self.base_url}/api/tasks/",
-                f"{self.base_url}/tasks/",
-            ]
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz))
 
-            for endpoint in endpoints:
-                try:
-                    async with session.get(endpoint) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            all_tasks = self._parse_tasks_response(data)
-                            if "due_date_after" not in endpoint and "date_from" not in endpoint:
-                                return self._filter_tasks_by_week(all_tasks, start_of_week, end_of_week)
-                            else:
-                                return all_tasks
-                except Exception as e:
-                    logging.debug(f"Week tasks endpoint {endpoint} failed: {e}")
-                    continue
+        events_filtered = {
+            calendar_info: list(filter(
+                lambda e: date.today() <= process_timestamp(e["start_at"], e["timezone"]).date() <= date.today() + timedelta(days=7),
+                events
+            )) for calendar_info, events in events_by_calendar.items()
+        }
 
-            return []
+        return events_filtered
 
     def _parse_tasks_response(self, data) -> list:
         if isinstance(data, list):

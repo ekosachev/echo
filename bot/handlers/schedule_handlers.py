@@ -65,8 +65,8 @@ async def today(message: types.Message):
                     sum(
                         [[f'{calendar_name}:'] +
                         [f' - {event["title"]}' +
-                        f'{process_timestamp(event["start_at"], event["timezone"])}' +
-                        f'{process_timestamp(event["end_at"], event["timezone"])}'
+                        f' {process_timestamp(event["start_at"], event["timezone"])}' +
+                        f' - {process_timestamp(event["end_at"], event["timezone"])}'
                             for event in events] if events else [f'{calendar_name}: Нет событий на сегодня']
                         for (_, calendar_name), events in today_tasks.items()],
                         start=[]
@@ -80,35 +80,44 @@ async def today(message: types.Message):
         
 @router.message(F.text == "Week")
 async def week(message: types.Message):
-    if message.from_user.id not in authenticated_users:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    user_id = message.from_user.id
+    if user_id not in authenticated_users:
         await message.answer(
             "❌ Сначала привяжите аккаунт через /start",
             reply_markup=get_start_keyboard()
         )
         return
-    await message.answer("📅 Получаю задачи на неделю...")
+    await message.answer("Получаю события на неделю...")
 
     try:
-        week_tasks = await api_service.get_week_tasks()
-        today = date.today()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
+        today_tasks = await api_service.get_week_tasks(authenticated_users[user_id])
+        if today_tasks is None:
+            await message.answer("Ошибка при получении событий")
+            return
 
-        if week_tasks:
-            tasks_text = format_tasks_for_week(week_tasks, start_of_week, end_of_week)
-            await message.answer(tasks_text, reply_markup=get_main_keyboard())
-        else:
-            await message.answer(
-                f"🎉 На неделю с {start_of_week.strftime('%d.%m')} по {end_of_week.strftime('%d.%m.%Y')} задач нет!\n"
-                "Можете отдохнуть или запланировать новые задачи!",
-                reply_markup=get_main_keyboard()
-            )
-    except Exception as e:
-        logging.error(f"Week tasks error: {e}")
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz)).strftime("%m/%d %H:%M:%S")
+
         await message.answer(
-            "❌ Ошибка при получении задач на неделю.",
-            reply_markup=get_main_keyboard()
+            "События на неделю:\n"
+            + ( 
+                "Ничего не нашлось :(" if not today_tasks else '\n'.join(
+                    sum(
+                        [[f'{calendar_name}:'] +
+                        [f' - {event["title"]}' +
+                        f' {process_timestamp(event["start_at"], event["timezone"])}' +
+                        f' - {process_timestamp(event["end_at"], event["timezone"])}'
+                            for event in events] if events else [f'{calendar_name}: Нет событий на сегодня']
+                        for (_, calendar_name), events in today_tasks.items()],
+                        start=[]
+                    ) 
+                )
+            )
         )
+
+    except TokenExpiredError as _:
+        await message.answer("Сессия истекла. Пожалуйста, войдите в аккаунт через /start")
 
 def format_tasks_for_today(tasks, today_date):
     from datetime import datetime
