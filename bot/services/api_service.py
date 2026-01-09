@@ -9,24 +9,17 @@ class APIService:
 
     async def authenticate_user(self, login: str, password: str) -> bool:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/auth/login/",
-                f"{self.base_url}/auth/login/",
-                f"{self.base_url}/api/token/auth/",
-                f"{self.base_url}/api/auth/",
-            ]
-            for endpoint in endpoints:
-                try:
-                    async with session.post(
-                            endpoint,
-                            json={'username': login, 'password': password},
-                            headers={'Content-Type': 'application/json'}
-                    ) as resp:
-                        if resp.status == 200:
-                            return True
-                except Exception as e:
-                    logging.debug(f"Auth endpoint {endpoint} failed: {e}")
-                    continue
+            endpoint = f'{self.base_url}/api/v1/auth/login'
+            try:
+                async with session.post(
+                        endpoint,
+                        json={'email': login, 'password': password},
+                        headers={'Content-Type': 'application/json'}
+                ) as resp:
+                    if resp.status == 200:
+                        return True
+            except Exception as e:
+                logging.error(f"Auth endpoint {endpoint} failed: {e}")
 
             return False
 

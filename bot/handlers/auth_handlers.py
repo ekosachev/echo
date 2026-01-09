@@ -16,7 +16,7 @@ class AuthStates(StatesGroup):
 @router.message(Command('start'))
 async def cmd_start(message: types.Message, state: FSMContext):
     await message.answer(
-        "Для привязки аккаунта введите ваш логин от сайта:",
+        "Для привязки аккаунта введите ваш логин от сайта (email-адрес):",
         reply_markup=types.ReplyKeyboardRemove()
     )
     await state.set_state(AuthStates.waiting_login)
