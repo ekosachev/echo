@@ -39,32 +39,45 @@ async def my_calendars(message: types.Message):
 
 @router.message(F.text == "Today")
 async def today(message: types.Message):
-    if message.from_user.id not in authenticated_users:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    user_id = message.from_user.id
+    if user_id not in authenticated_users:
         await message.answer(
             "❌ Сначала привяжите аккаунт через /start",
             reply_markup=get_start_keyboard()
         )
         return
-    await message.answer("Получаю задачи на сегодня...")
+    await message.answer("Получаю события на сегодня...")
 
     try:
-        today_tasks = await api_service.get_today_tasks()
-        if today_tasks:
-            today_date = date.today().isoformat()
-            tasks_text = format_tasks_for_today(today_tasks, today_date)
-            await message.answer(tasks_text, reply_markup=get_main_keyboard())
-        else:
-            await message.answer(
-                f"🎉 Отлично! На сегодня ({datetime.now().strftime('%d.%m.%Y')}) задач нет.\n"
-                "Можете отдохнуть или запланировать новые задачи!",
-                reply_markup=get_main_keyboard()
-            )
-    except Exception as e:
-        logging.error(f"Today tasks error: {e}")
+        today_tasks = await api_service.get_today_tasks(authenticated_users[user_id])
+        if today_tasks is None:
+            await message.answer("Ошибка при получении событий")
+            return
+
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz)).strftime("%H:%M:%S")
+
         await message.answer(
-            "❌ Ошибка при получении задач.",
-            reply_markup=get_main_keyboard()
+            "События на сегодня:\n"
+            + ( 
+                "Ничего не нашлось :(" if not today_tasks else '\n'.join(
+                    sum(
+                        [[f'{calendar_name}:'] +
+                        [f' - {event["title"]}' +
+                        f'{process_timestamp(event["start_at"], event["timezone"])}' +
+                        f'{process_timestamp(event["end_at"], event["timezone"])}'
+                            for event in events] if events else [f'{calendar_name}: Нет событий на сегодня']
+                        for (_, calendar_name), events in today_tasks.items()],
+                        start=[]
+                    ) 
+                )
+            )
         )
+
+    except TokenExpiredError as _:
+        await message.answer("Сессия истекла. Пожалуйста, войдите в аккаунт через /start")
+        
 @router.message(F.text == "Week")
 async def week(message: types.Message):
     if message.from_user.id not in authenticated_users:

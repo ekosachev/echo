@@ -45,24 +45,52 @@ class APIService:
             except aiohttp.ClientError as e:
                 logging.error(f"Failed to fetch calendars: {e}")
         return None
-
-    async def get_today_tasks(self, token: str) -> list:
-        from datetime import date
-        today_date = date.today().isoformat()
+    
+    async def _get_all_events(self, token: str) -> Optional[dict]:
+        calendars = await self.get_calendars(token)
+        if not calendars:
+            return {} if calendars is not None else None
+        
+        base_endpoint = self.base_url + '/api/v1/calendars/{}/events'
+        result = {}
 
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoint = f'{self.base_url}/api/v1/'
-            try:
-                async with session.get(endpoint) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return self._parse_tasks_response(data)
-                    if resp.status == 401:
-                        raise TokenExpiredError
-            except aiohttp.ClientError as e:
-                logging.error(f"Tasks endpoint {endpoint} failed: {e}")
+            for calendar in calendars:
+                endpoint = base_endpoint.format(calendar['id'])
+                try:
+                    async with session.get(endpoint, headers={'Authorization': f'Bearer {token}'}) as resp:
+                        if resp.ok:
+                            data = await resp.json()
+                            result[(calendar["id"], calendar['name'])] = data['events']
+                        if resp.status == 401:
+                            raise TokenExpiredError
 
-            return []
+                except aiohttp.ClientError as e:
+                    logging.error(f'Failed to get events for calendar {calendar["id"]}: {e}')
+                    return None
+        return result
+            
+
+    async def get_today_tasks(self, token: str) -> Optional[dict]:
+        from datetime import datetime, date
+        from zoneinfo import ZoneInfo
+        
+        events_by_calendar = await self._get_all_events(token)
+        if not events_by_calendar:
+            return events_by_calendar
+
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz))
+
+        events_filtered = {
+            calendar_info: list(filter(
+                lambda e: process_timestamp(e["start_at"], e["timezone"]).date() == date.today(),
+                events
+            )) for calendar_info, events in events_by_calendar.items()
+        }
+
+        return events_filtered
+
+        
 
     async def get_week_tasks(self) -> list:
         from datetime import date, timedelta, datetime
