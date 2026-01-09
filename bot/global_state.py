@@ -1,0 +1,1 @@
+authenticated_users = {}

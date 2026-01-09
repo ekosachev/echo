@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, date, timedelta
 from keyboards.main_kb import get_main_keyboard, get_start_keyboard
 from services.api_service import api_service
-from main import authenticated_users
+from global_state import authenticated_users
 from utils.date_utils import get_russian_weekday
 
 router = Router()

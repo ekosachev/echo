@@ -6,7 +6,7 @@ import logging
 from config_reader import config
 from keyboards.main_kb import get_start_keyboard, get_main_keyboard
 from services.api_service import api_service
-from main import authenticated_users
+from global_state import authenticated_users  # Изменено: импорт из глобального состояния
 
 router = Router()
 class AuthStates(StatesGroup):

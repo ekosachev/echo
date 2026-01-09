@@ -10,6 +10,7 @@ from handlers.schedule_handlers import router as schedule_router
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
+dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(auth_router)
 dp.include_router(main_router)
