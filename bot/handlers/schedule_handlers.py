@@ -17,7 +17,7 @@ async def my_calendars(message: types.Message):
         )
         return
     
-    await message.answer("Получаю список доступнх календарей...")
+    await message.answer("Получаю список доступных календарей...")
 
     try:
 
