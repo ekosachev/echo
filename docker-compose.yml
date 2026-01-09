@@ -50,8 +50,6 @@ services:
       dockerfile: front.dockerfile
     ports:
       - "3000:3000"
-    env_file:
-      - ./front/.env
     environment:
       - API_INTERNAL_URL=http://app:8080
       - NEXT_PUBLIC_API_URL=http://localhost:8080
