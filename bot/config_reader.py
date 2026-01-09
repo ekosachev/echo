@@ -1,3 +1,4 @@
+"""config_reader module handles reading the .env file"""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 

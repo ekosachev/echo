@@ -13,6 +13,7 @@ async def cmd_help(message: types.Message):
         "Кнопки:\n"
         "Today - расписание на сегодня\n"
         "Week - расписание на неделю\n"
+        "My Calendars - доступные календари\n"
         "My Account - информация об аккаунте",
         reply_markup=get_main_keyboard()
     )
@@ -34,9 +35,9 @@ async def start_button(message: types.Message, state):
     from handlers.auth_handlers import cmd_start
     await cmd_start(message, state)
 
-@router.message()
-async def any_message(message: types.Message):
-    await message.answer(
-        "Нажмите кнопку Start для начала работы!",
-        reply_markup=get_start_keyboard()
-    )
+# @router.message()
+# async def any_message(message: types.Message):
+#     await message.answer(
+#         "Нажмите кнопку Start для начала работы!",
+#         reply_markup=get_start_keyboard()
+#     )

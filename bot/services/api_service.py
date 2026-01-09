@@ -1,89 +1,115 @@
-import aiohttp
+"""api_service module handles interactions with the backend api"""
 import logging
+from typing import Optional
+
+import aiohttp
 from config_reader import config
+
+class TokenExpiredError(Exception):
+    pass
 
 class APIService:
     def __init__(self):
         self.base_url = config.api_base_url
         self.timeout = config.api_timeout
 
-    async def authenticate_user(self, login: str, password: str) -> bool:
+    async def authenticate_user(self, login: str, password: str) -> tuple[bool, Optional[str]]:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/auth/login/",
-                f"{self.base_url}/auth/login/",
-                f"{self.base_url}/api/token/auth/",
-                f"{self.base_url}/api/auth/",
-            ]
-            for endpoint in endpoints:
-                try:
-                    async with session.post(
-                            endpoint,
-                            json={'username': login, 'password': password},
-                            headers={'Content-Type': 'application/json'}
-                    ) as resp:
-                        if resp.status == 200:
-                            return True
-                except Exception as e:
-                    logging.debug(f"Auth endpoint {endpoint} failed: {e}")
-                    continue
+            endpoint = f'{self.base_url}/api/v1/auth/login'
+            try:
+                async with session.post(
+                        endpoint,
+                        json={'email': login, 'password': password},
+                        headers={'Content-Type': 'application/json'}
+                ) as resp:
+                    if resp.status == 200:
+                        body = await resp.json()
+                        return True, body["token"]
+                    if resp.status == 401:
+                        return False, None
+            except aiohttp.ClientError as e:
+                logging.error(f"Auth endpoint {endpoint} failed: {e}")
 
-            return False
-
-    async def get_today_tasks(self) -> list:
-        from datetime import date
-        today_date = date.today().isoformat()
+            return False, None
+        
+    async def get_calendars(self, token: str) -> Optional[list]:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+            endpoint = f'{self.base_url}/api/v1/calendars'
+            try:
+                async with session.get(endpoint, headers={'Authorization': f'Bearer {token}'}) as resp:
+                    if resp.ok:
+                        data = await resp.json()
+                        return data['calendars']
+                    if resp.status == 401:
+                        raise TokenExpiredError
+            except aiohttp.ClientError as e:
+                logging.error(f"Failed to fetch calendars: {e}")
+        return None
+    
+    async def _get_all_events(self, token: str) -> Optional[dict]:
+        calendars = await self.get_calendars(token)
+        if not calendars:
+            return {} if calendars is not None else None
+        
+        base_endpoint = self.base_url + '/api/v1/calendars/{}/events'
+        result = {}
 
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/tasks/?due_date={today_date}",
-                f"{self.base_url}/api/tasks/?date={today_date}",
-                f"{self.base_url}/tasks/?due_date={today_date}",
-                f"{self.base_url}/api/schedule/?date={today_date}",
-            ]
-
-            for endpoint in endpoints:
+            for calendar in calendars:
+                endpoint = base_endpoint.format(calendar['id'])
                 try:
-                    async with session.get(endpoint) as resp:
-                        if resp.status == 200:
+                    async with session.get(endpoint, headers={'Authorization': f'Bearer {token}'}) as resp:
+                        if resp.ok:
                             data = await resp.json()
-                            return self._parse_tasks_response(data)
-                except Exception as e:
-                    logging.debug(f"Tasks endpoint {endpoint} failed: {e}")
-                    continue
+                            result[(calendar["id"], calendar['name'])] = data['events']
+                        if resp.status == 401:
+                            raise TokenExpiredError
 
-            return []
+                except aiohttp.ClientError as e:
+                    logging.error(f'Failed to get events for calendar {calendar["id"]}: {e}')
+                    return None
+        return result
+            
 
-    async def get_week_tasks(self) -> list:
-        from datetime import date, timedelta, datetime
-        today = date.today()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
+    async def get_today_tasks(self, token: str) -> Optional[dict]:
+        from datetime import datetime, date
+        from zoneinfo import ZoneInfo
+        
+        events_by_calendar = await self._get_all_events(token)
+        if not events_by_calendar:
+            return events_by_calendar
 
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            endpoints = [
-                f"{self.base_url}/api/tasks/?due_date_after={start_of_week}&due_date_before={end_of_week}",
-                f"{self.base_url}/api/tasks/?date_from={start_of_week}&date_to={end_of_week}",
-                f"{self.base_url}/tasks/?start_date={start_of_week}&end_date={end_of_week}",
-                f"{self.base_url}/api/tasks/",
-                f"{self.base_url}/tasks/",
-            ]
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz))
 
-            for endpoint in endpoints:
-                try:
-                    async with session.get(endpoint) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            all_tasks = self._parse_tasks_response(data)
-                            if "due_date_after" not in endpoint and "date_from" not in endpoint:
-                                return self._filter_tasks_by_week(all_tasks, start_of_week, end_of_week)
-                            else:
-                                return all_tasks
-                except Exception as e:
-                    logging.debug(f"Week tasks endpoint {endpoint} failed: {e}")
-                    continue
+        events_filtered = {
+            calendar_info: list(filter(
+                lambda e: process_timestamp(e["start_at"], e["timezone"]).date() == date.today(),
+                events
+            )) for calendar_info, events in events_by_calendar.items()
+        }
 
-            return []
+        return events_filtered
+
+        
+
+    async def get_week_tasks(self, token) -> Optional[dict]:
+        from datetime import datetime, date, timedelta
+        from zoneinfo import ZoneInfo
+        
+        events_by_calendar = await self._get_all_events(token)
+        if not events_by_calendar:
+            return events_by_calendar
+
+        process_timestamp = lambda dt, tz: datetime.fromisoformat(dt).astimezone(tz=ZoneInfo(tz))
+
+        events_filtered = {
+            calendar_info: list(filter(
+                lambda e: date.today() <= process_timestamp(e["start_at"], e["timezone"]).date() <= date.today() + timedelta(days=7),
+                events
+            )) for calendar_info, events in events_by_calendar.items()
+        }
+
+        return events_filtered
 
     def _parse_tasks_response(self, data) -> list:
         if isinstance(data, list):
