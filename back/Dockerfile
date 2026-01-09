@@ -19,6 +19,7 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates curl && update-ca-certificates
 
 COPY --from=builder /app/server /app/server
+COPY --from=builder /app/migrations /app/migrations
 
 # Environment variables (overridden by docker-compose)
 ENV HTTP_PORT=8080
